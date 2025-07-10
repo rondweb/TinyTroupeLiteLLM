@@ -9,7 +9,7 @@ sys.path.insert(0, '../../tinytroupe/')
 sys.path.insert(0, '../../')
 sys.path.insert(0, '..')
 
-import tinytroupe.openai_utils as openai_utils
+import tinytroupe.litellm_utils as litellm_utils
 from tinytroupe.agent import TinyPerson
 from tinytroupe.environment import TinyWorld, TinySocialNetwork
 import pytest
@@ -33,9 +33,9 @@ if conftest.refresh_cache:
     os.remove(CACHE_FILE_NAME)
 
 if conftest.use_cache:
-    openai_utils.force_api_cache(True, CACHE_FILE_NAME)
+    litellm_utils.force_api_cache(True, CACHE_FILE_NAME)
 else:
-    openai_utils.force_api_cache(False, CACHE_FILE_NAME)
+    litellm_utils.force_api_cache(False, CACHE_FILE_NAME)
 
 
 ##################################################
@@ -133,7 +133,7 @@ def proposition_holds(proposition: str) -> bool:
                 {"role": "user", "content": user_prompt}]
     
     # call the LLM
-    next_message = openai_utils.client().send_message(messages)
+    next_message = litellm_utils.client().send_message(messages)
 
     # check the result
     cleaned_message = only_alphanumeric(next_message["content"])

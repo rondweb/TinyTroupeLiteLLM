@@ -1,6 +1,6 @@
 from tinytroupe.agent import TinyPerson
 from tinytroupe.environment import TinyWorld
-from tinytroupe.openai_utils import LLMRequest
+from tinytroupe.litellm_utils import LLMRequest
 
 class Proposition:
 

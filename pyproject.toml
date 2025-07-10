@@ -24,8 +24,7 @@ classifiers = [
 dependencies = [
     "pandas", 
     "pytest", "pytest-cov",
-    "openai >= 1.40", 
-    "tiktoken",
+    "litellm >= 1.0.0",
     "msal",
     "rich", "requests", "chevron",
     "llama-index", "llama-index-embeddings-huggingface", "llama-index-readers-web", "llama-index-embeddings-azure-openai",

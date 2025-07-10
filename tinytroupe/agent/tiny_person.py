@@ -1,6 +1,6 @@
 from tinytroupe.agent import logger, default, Self, AgentOrWorld, CognitiveActionModel
 from tinytroupe.agent.memory import EpisodicMemory, SemanticMemory
-import tinytroupe.openai_utils as openai_utils
+import tinytroupe.litellm_utils as litellm_utils
 from tinytroupe.utils import JsonSerializableRegistry, repeat_on_error, name_or_empty
 import tinytroupe.utils as utils
 from tinytroupe.control import transactional, current_simulation
@@ -781,10 +781,10 @@ class TinyPerson(JsonSerializableRegistry):
             for msg in self.current_messages
         ]
 
-        logger.debug(f"[{self.name}] Sending messages to OpenAI API")
+        logger.debug(f"[{self.name}] Sending messages to LiteLLM API")
         logger.debug(f"[{self.name}] Last interaction: {messages[-1]}")
 
-        next_message = openai_utils.client().send_message(messages, response_format=CognitiveActionModel)
+        next_message = litellm_utils.client().send_message(messages, response_format=CognitiveActionModel)
 
         logger.debug(f"[{self.name}] Received message: {next_message}")
 
@@ -1016,7 +1016,7 @@ class TinyPerson(JsonSerializableRegistry):
 
         if self._extended_agent_summary is None and extended:
             logger.debug(f"Generating extended agent summary for {self.name}.")
-            self._extended_agent_summary = openai_utils.LLMRequest(
+            self._extended_agent_summary = litellm_utils.LLMRequest(
                                                 system_prompt="""
                                                 You are given a short biography of an agent, as well as a detailed specification of his or her other characteristics
                                                 You must then produce a short paragraph (3 or 4 sentences) that **complements** the short biography, adding details about

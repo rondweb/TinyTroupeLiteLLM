@@ -6,7 +6,7 @@ from typing import Collection
 import copy
 import functools
 import inspect
-from tinytroupe.openai_utils import LLMRequest
+from tinytroupe.litellm_utils import LLMRequest
 
 from tinytroupe.utils import logger
 from tinytroupe.utils.rendering import break_text_at_length

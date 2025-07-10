@@ -5,7 +5,7 @@
   <img src="./docs/tinytroupe_stage.png" alt="A tiny office with tiny people doing some tiny jobs.">
 </p>
 
-*TinyTroupe* is an experimental Python library that allows the **simulation** of people with specific personalities, interests, and goals. These artificial agents - `TinyPerson`s - can listen to us and one another, reply back, and go about their lives in simulated `TinyWorld` environments. This is achieved by leveraging the power of Large Language Models (LLMs), notably GPT-4, to generate realistic simulated behavior. This allows us to investigate a wide range of **convincing interactions** and **consumer types**, with **highly customizable personas**, under **conditions of our choosing**. The focus is thus on *understanding* human behavior and not on directly *supporting it* (like, say, AI assistants do) -- this results in, among other things, specialized mechanisms that make sense only in a simulation setting. Further, unlike other *game-like* LLM-based simulation approaches, TinyTroupe aims at enlightening productivity and business scenarios, thereby contributing to more successful projects and products. Here are some application ideas to **enhance human imagination**:
+*TinyTroupe* is an experimental Python library that allows the **simulation** of people with specific personalities, interests, and goals. These artificial agents - `TinyPerson`s - can listen to us and one another, reply back, and go about their lives in simulated `TinyWorld` environments. This is achieved by leveraging the power of Large Language Models (LLMs). Thanks to its integration with **[LiteLLM](https://github.com/BerriAI/litellm)**, TinyTroupe supports over 100 LLM providers, allowing for unparalleled flexibility in generating realistic simulated behavior. This allows us to investigate a wide range of **convincing interactions** and **consumer types**, with **highly customizable personas**, under **conditions of our choosing**. The focus is thus on *understanding* human behavior and not on directly *supporting it* (like, say, AI assistants do) -- this results in, among other things, specialized mechanisms that make sense only in a simulation setting. Further, unlike other *game-like* LLM-based simulation approaches, TinyTroupe aims at enlightening productivity and business scenarios, thereby contributing to more successful projects and products. Here are some application ideas to **enhance human imagination**:
 
   - **Advertisement:** TinyTroupe can **evaluate digital ads (e.g., Bing Ads)** offline with a simulated audience before spending money on them!
   - **Software Testing:** TinyTroupe can **provide test input** to systems (e.g., search engines, chatbots or copilots) and then **evaluate the results**.
@@ -35,6 +35,7 @@ We are releasing *TinyTroupe* at a relatively early stage, with considerable wor
 - 🌟 [Principles](#principles)
 - 🏗️ [Project Structure](#project-structure)
 - 📖 [Using the Library](#using-the-library)
+- 📦 [Packaging the Project](#packaging-the-project)
 - 🤝 [Contributing](#contributing)
 - 🙏 [Acknowledgements](#acknowledgements)
 - 📜 [Citing TinyTroupe](#how-to-cite-tinytroupe)
@@ -43,6 +44,11 @@ We are releasing *TinyTroupe* at a relatively early stage, with considerable wor
 
 
 ## LATEST NEWS
+**[2025-07-10] Migration to LiteLLM is complete!**
+  - TinyTroupe now uses **LiteLLM** to interact with language models, replacing the previous OpenAI-specific implementation.
+  - This change brings support for **over 100 LLM providers**, including OpenAI, Anthropic (Claude), Cohere, Groq, and many more.
+  - You can now configure any supported model in your `config.ini` or agent definitions. See the updated [Pre-requisites](#pre-requisites) section for details on setting API keys.
+
 **[2025-01-29] Release 0.4.0 with various improvements. Some highlights:**
   - Personas have deeper specifications now, including  personality traits, preferences, beliefs, and more. It is likely we'll further expand this in the future. 
   - `TinyPerson`s can now be defined as JSON files as well, and loaded via the `TinyPerson.load_specification()`, for greater convenience. After loading the JSON file, you can still modify the agent programmatically. See the [examples/agents/](./examples/agents/) folder for examples.
@@ -99,17 +105,34 @@ After running a simulation, we can extract the results in a machine-readable man
   <img src="./docs/example_screenshot_brainstorming-2.png" alt="An example.">
 </p>
 
-You can find other examples in the [examples/](./examples/) folder.
-
-
 ## Pre-requisites
 
 To run the library, you need:
-  - Python 3.10 or higher. We'll assume you are using [Anaconda](https://docs.anaconda.com/anaconda/install/), but you can use other Python distributions.
-  - Access to Azure OpenAI Service or Open AI GPT-4 APIs. You can get access to the Azure OpenAI Service [here](https://azure.microsoft.com/en-us/products/ai-services/openai-service), and to the OpenAI API [here](https://platform.openai.com/). 
-      * For Azure OpenAI Service, you will need to set the `AZURE_OPENAI_KEY` and `AZURE_OPENAI_ENDPOINT` environment variables to your API key and endpoint, respectively.
-      * For OpenAI, you will need to set the `OPENAI_API_KEY` environment variable to your API key.
-  - By default, TinyTroupe `config.ini` is set to use some specific API, model and related parameters. You can customize these values by including your own `config.ini` file in the same folder as the program or notebook you are running. An example of a `config.ini` file is provided in the [examples/](./examples/) folder.
+  - Python 3.10 or higher.
+  - Access to an LLM provider API. TinyTroupe uses **LiteLLM** to connect to over 100 different LLM providers.
+
+To configure access, you need to set the appropriate environment variable for your chosen provider. Here are a few examples:
+
+-   **OpenAI:**
+    ```bash
+    export OPENAI_API_KEY="your-api-key"
+    ```
+-   **Anthropic (Claude):**
+    ```bash
+    export ANTHROPIC_API_KEY="your-api-key"
+    ```
+-   **Cohere:**
+    ```bash
+    export COHERE_API_KEY="your-api-key"
+    ```
+-   **Groq:**
+    ```bash
+    export GROQ_API_KEY="your-api-key"
+    ```
+
+For a full list of supported providers and their required environment variables, please refer to the [LiteLLM documentation](https://docs.litellm.ai/docs/providers).
+
+By default, TinyTroupe's `config.ini` is set to use a specific API, model, and related parameters. You can customize these values by including your own `config.ini` file in the same folder as the program or notebook you are running. An example of a `config.ini` file is provided in the [examples/](./examples/) folder.
 
 >[!IMPORTANT]
 > **Content Filters**: To ensure no harmful content is generated during simulations, it is strongly recommended to use content filters whenever available at the API level. In particular, **if using Azure OpenAI, there's extensive support for content moderation, and we urge you to use it.** For details about how to do so, please consult [the corresponding Azure OpenAI documentation](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/content-filter). If content filters are in place, and an API call is rejected by them, the library will raise an exception, as it will be unable to proceed with the simulation at that point.
@@ -117,51 +140,26 @@ To run the library, you need:
 
 ## Installation
 
-**Currently, the officially recommended way to install the library is directly from this repository, not PyPI.** You can follow these steps:
+You can install TinyTroupe in two ways: directly from the source for development, or from a packaged wheel file for use as a library in another project.
 
-1. If Conda is not installed, you can get it from [here](https://docs.anaconda.com/anaconda/install/). You can also use other Python distributions, but we'll assume Conda here for simplicity.
-2. Create a new Python environment: 
-      ```bash
-      conda create -n tinytroupe python=3.10
-      ```
-3. Activate the environment: 
-      ```bash
-      conda activate tinytroupe
-      ```
-4. Make sure you have either Azure OpenAI or OpenAI API keys set as environment variables, as described in the [Pre-requisites](#pre-requisites) section.
-5. Use `pip` to install the library **directly from this repository** (we **will not install from PyPI**):
-   ```bash
-   pip install git+https://github.com/microsoft/TinyTroupe.git@main
-   ```
+### For Development
 
-Now you should be able to `import tinytroupe` in your Python code or Jupyter notebooks. 🥳
+To install the project in an editable mode, which is useful for development, run the following command from the root of the project directory:
 
-*Note: If you have any issues, try to clone the repository and install from the local repository, as described below.*
+```bash
+pip install -e .
+```
 
+### As a Library
 
-### Running the examples after installation
-To actually run the examples, you need to download them to your local machine. You can do this by cloning the repository:
+To use TinyTroupe as a library in another project, first build the package as described in the [Packaging the Project](#packaging-the-project) section. This will create a `.whl` file in the `dist/` directory.
 
-1. Clone the repository, as we'll perform a local install (we **will not install from PyPI**):
-    ```bash
-    git clone https://github.com/microsoft/tinytroupe
-    cd tinytroupe
-    ```
-2. You can now run the examples in the [examples/](./examples/) folder, or adapt them to create your own custom simulations. 
+Then, you can install it using `pip`:
 
-
-### Local development
-
-If you want to modify TinyTroupe itself, you can install it in editable mode (i.e., changes to the code will be reflected immediately):
-1. Clone the repository, as we'll perform a local install (we **will not install from PyPI**):
-    ```bash
-    git clone https://github.com/microsoft/tinytroupe
-    cd tinytroupe
-    ```
-2. Install the library in editable mode:
-    ```bash
-    pip install -e .
-    ```
+```bash
+# Replace the filename with the actual name of the generated wheel file
+pip install dist/tinytroupe-0.4.0-py3-none-any.whl
+```
 
 ## Principles 
 Recently, we have seen LLMs used to simulate people (such as [this](https://github.com/joonspk-research/generative_agents)), but largely in a “game-like” setting for contemplative or entertainment purposes. There are also libraries for building multiagent systems for problem-solving and assistive AI, like [Autogen](https://microsoft.github.io/) and [Crew AI](https://docs.crewai.com/). What if we combine these ideas and simulate people to support productivity tasks? TinyTroupe is our attempt. To do so, it follows these principles:
@@ -203,276 +201,76 @@ The project is structured as follows:
 
 ## Using the Library
 
-As any multiagent system, TinyTroupe provides two key abstractions:
-  - `TinyPerson`, the *agents* that have personality, receive stimuli and act upon them.
-  - `TinyWorld`, the *environment* in which the agents exist and interact.
-
-Various parameters can also be customized in the `config.ini` file, notably the API type (Azure OpenAI Service or OpenAI API), the model parameters, and the logging level.
-
-Let's see some examples of how to use these and also learn about other mechanisms available in the library.
-
-### TinyPerson
-
-A `TinyPerson` is a simulated person with specific personality traits, interests, and goals. As each such simulated agent progresses through its life, it receives stimuli from the environment and acts upon them. The stimuli are received through the `listen`, `see` and other similar methods, and the actions are performed through the `act` method. Convenience methods like `listen_and_act` are also provided.
-
-
-Each such agent contains a lot of unique details, which is the source of its realistic behavior. This, however, means that it takes significant effort to specify an agent manually. Hence, for convenience, `TinyTroupe` provides some easier ways to get started or generate new agents.
-
-To begin with, `tinytroupe.examples` contains some pre-defined agent builders that you can use. For example, `tinytroupe.examples.create_lisa_the_data_scientist` creates a `TinyPerson` that represents a data scientist called Lisa. You can use it as follows:
+Once installed, you can import `tinytroupe` and start creating simulations. Here's a simple example of a chat between two agents:
 
 ```python
-from tinytroupe.examples import create_lisa_the_data_scientist
+import tinytroupe
+from tinytroupe.agent import TinyPerson
+from tinytroupe.environment import TinyWorld
 
-lisa = create_lisa_the_data_scientist() # instantiate a Lisa from the example builder
-lisa.listen_and_act("Tell me about your life.")
-```
+# Note: Make sure agent JSON files are accessible.
+# For this example, you might need to copy the `examples/agents` directory
+# or provide absolute paths.
+lisa = TinyPerson.load_specification("path/to/your/agents/Lisa.agent.json")
+oscar = TinyPerson.load_specification("path/to/your/agents/Oscar.agent.json")
 
-To see how to define your own agents from scratch, you can check Lisa's source. You'll see there are two ways. One is by loading an agent specification file, such as [examples/agents/Lisa.agent.json](./examples/agents/Lisa.agent.json):
-
-```json
-{   "type": "TinyPerson",
-    "persona": {
-        "name": "Lisa Carter",
-        "age": 28,
-        "gender": "Female",
-        "nationality": "Canadian",
-        "residence": "USA",
-        "education": "University of Toronto, Master's in Data Science. Thesis on improving search relevance using context-aware models. Postgraduate experience includes an internship at a tech startup focused on conversational AI.",
-        "long_term_goals": [
-            "To advance AI technology in ways that enhance human productivity and decision-making.",
-            "To maintain a fulfilling and balanced personal and professional life."
-        ],
-        "occupation": {
-            "title": "Data Scientist",
-            "organization": "Microsoft, M365 Search Team",
-            "description": "You are a data scientist working at Microsoft in the M365 Search team. Your primary role is to analyze user behavior and feedback data to improve the relevance and quality of search results. You build and test machine learning models for search scenarios like natural language understanding, query expansion, and ranking. Accuracy, reliability, and scalability are at the forefront of your work. You frequently tackle challenges such as noisy or biased data and the complexities of communicating your findings and recommendations effectively. Additionally, you ensure all your data and models comply with privacy and security policies."
-        },
-        "style": "Professional yet approachable. You communicate clearly and effectively, ensuring technical concepts are accessible to diverse audiences.",
-        "personality": {
-            "traits": [
-                "You are curious and love to learn new things.",
-                "You are analytical and like to solve problems.",
-                "You are friendly and enjoy working with others.",
-                "You don't give up easily and always try to find solutions, though you can get frustrated when things don't work as expected."
-            ],
-            "big_five": {
-                "openness": "High. Very imaginative and curious.",
-                "conscientiousness": "High. Meticulously organized and dependable.",
-                "extraversion": "Medium. Friendly and engaging but enjoy quiet, focused work.",
-                "agreeableness": "High. Supportive and empathetic towards others.",
-                "neuroticism": "Low. Generally calm and composed under pressure."
-            }
-        },
-
-        ...
-        
-}
-
-```
-
-
-The other is by defining the agent programmatically, with statements like these:
-
-```python
-  lisa = TinyPerson("Lisa")
-
-  lisa.define("age", 28)
-  lisa.define("nationality", "Canadian")
-  lisa.define("occupation", {
-                "title": "Data Scientist",
-                "organization": "Microsoft",
-                "description":
-                """
-                You are a data scientist. You work at Microsoft, in the M365 Search team. Your main role is to analyze 
-                user behavior and feedback data, and use it to improve the relevance and quality of the search results. 
-                You also build and test machine learning models for various search scenarios, such as natural language 
-                understanding, query expansion, and ranking. You care a lot about making sure your data analysis and 
-                models are accurate, reliable and scalable. Your main difficulties typically involve dealing with noisy, 
-                incomplete or biased data, and finding the best ways to communicate your findings and recommendations to 
-                other teams. You are also responsible for making sure your data and models are compliant with privacy and 
-                security policies.
-                """})
-
-  lisa.define("behaviors", {"routines": ["Every morning, you wake up, do some yoga, and check your emails."]})
-
-  lisa.define("personality", 
-                        {"traits": [
-                            "You are curious and love to learn new things.",
-                            "You are analytical and like to solve problems.",
-                            "You are friendly and enjoy working with others.",
-                            "You don't give up easily, and always try to find a solution. However, sometimes you can get frustrated when things don't work as expected."
-                      ]})
-
-  lisa.define("preferences", 
-                        {"interests": [
-                          "Artificial intelligence and machine learning.",
-                          "Natural language processing and conversational agents.",
-                          "Search engine optimization and user experience.",
-                          "Cooking and trying new recipes.",
-                          "Playing the piano.",
-                          "Watching movies, especially comedies and thrillers."
-                        ]})
-
-```
-
-You can also combine both approaches, using the JSON file as a base and then adding or modifying details programmatically.
-
-#### Fragments
-
-`TinyPerson`s can also be further enriched via **fragments**, which are sub-specifications that can be added to the main specification. This is useful to reuse common parts across different agents. For example, the following fragment can be used to specify love of travel ([examples/fragments/travel_enthusiast.agent.fragment.json](./examples/fragments/travel_enthusiast.agent.fragment.json)):
-
-```json
-{
-    "type": "Fragment",
-    "persona": {
-        "preferences": {
-            "interests": [
-                "Traveling",
-                "Exploring new cultures",
-                "Trying local cuisines"
-            ],
-            "likes": [
-                "Travel guides",
-                "Planning trips and itineraries",
-                "Meeting new people",
-                "Taking photographs of scenic locations"
-            ],
-            "dislikes": [
-                "Crowded tourist spots",
-                "Unplanned travel disruptions",
-                "High exchange rates"
-            ]
-        },
-        "beliefs": [
-            "Travel broadens the mind and enriches the soul.",
-            "Experiencing different cultures fosters understanding and empathy.",
-            "Adventure and exploration are essential parts of life.",
-            "Reading travel guides is fun even if you don't visit the places."
-        ],
-        "behaviors": {
-            "travel": [
-                "You meticulously plan your trips, researching destinations and activities.",
-                "You are open to spontaneous adventures and detours.",
-                "You enjoy interacting with locals to learn about their culture and traditions.",
-                "You document your travels through photography and journaling.",
-                "You seek out authentic experiences rather than tourist traps."
-            ]
-        }
-    }
-}
-
-```
-
-This can then be imported into an agent like this:
-
-```python
-lisa.import_fragment("./examples/fragments/travel_enthusiast.agent.fragment.json")
-```
-
-
-
-#### TinyPersonFactory
-
-`TinyTroupe` also provides a clever way to obtain new agents, using LLMs to generate their specification for you, through the `TinyPersonFactory` class.
-
-```python
-from tinytroupe.factory import TinyPersonFactory
-
-factory = TinyPersonFactory("A hospital in São Paulo.")
-person = factory.generate_person("Create a Brazilian person that is a doctor, like pets and the nature and love heavy metal.")
-```
-
-### TinyWorld
-
-`TinyWorld` is the base class for environments. Here's an example of conversation between Lisa, the data scientist, and Oscar, the architect. The
-program is defined as follows:
-
-```python
+# Create a world and add the agents
 world = TinyWorld("Chat Room", [lisa, oscar])
 world.make_everyone_accessible()
+
+# Start the simulation by giving one agent a goal
 lisa.listen("Talk to Oscar to know more about him")
-world.run(4)
+world.run(4) # Run the simulation for 4 steps
+
+# Print the interactions
+print("--- Lisa's Interactions ---")
+lisa.pp_current_interactions()
+
+print("\n--- Oscar's Interactions ---")
+oscar.pp_current_interactions()
 ```
 
-This produces the following conversation:
+This example loads two predefined agents, places them in a world, and runs a short simulation where they interact. You can find more detailed examples in the `examples/` directory of this repository.
 
+## Project Structure
 
-```text
-USER --> Lisa: [CONVERSATION] 
-          > Talk to Oscar to know more about him
-────────────────────────────────────────────── Chat Room step 1 of 4 ──────────────────────────────────────────────
-Lisa --> Lisa: [THOUGHT] 
-          > I will now act a bit, and then issue DONE.
-Lisa acts: [TALK] 
-          > Hi Oscar, I'd love to know more about you. Could you tell me a bit about yourself?
-Lisa --> Lisa: [THOUGHT] 
-          > I will now act a bit, and then issue DONE.
-Lisa acts: [DONE] 
+The project is structured as follows:
+  - `/tinytroupe`: contains the Python library itself. In particular:
+    * Each submodule here might contain a `prompts/` folder with the prompts used to call the LLMs.
+  - `/tests`: contains the unit tests for the library. You can use the `test.bat` script to run these.
+  - `/examples`: contains examples that show how to use the library, mainly using Jupyter notebooks (for greater readability), but also as pure Python scripts.
+  - `/data`: any data used by the examples or the library.
+  - `/docs`: documentation for the project.
+- `pyproject.toml`: The project's configuration file, including dependencies.
+- `README.md`: This file.
 
-Lisa --> Oscar: [CONVERSATION] 
-          > Hi Oscar, I'd love to know more about you. Could you tell me a bit about yourself?
-Oscar --> Oscar: [THOUGHT] 
-           > I will now act a bit, and then issue DONE.
-Oscar acts: [TALK] 
-           > Hi Lisa! Sure, I'd be happy to share a bit about myself. I'm Oscar, a 30-year-old
-           > architect from Germany. I work at a company called Awesome Inc., where I focus on
-           > designing standard elements for new apartment buildings. I love modernist architecture,
-           > new technologies, and sustainable practices. In my free time, I enjoy traveling to
-           > exotic places, playing the guitar, and reading science fiction books. How about you?
-Oscar --> Oscar: [THOUGHT] 
-           > I will now act a bit, and then issue DONE.
-Oscar acts: [DONE] 
+## Packaging the Project
 
-Oscar --> Lisa: [CONVERSATION] 
-           > Hi Lisa! Sure, I'd be happy to share a bit about myself. I'm Oscar, a 30-year-old
-           > architect from Germany. I work at a company called Awesome Inc., where I focus on
-           > designing standard elements for new apartment buildings. I love modernist architecture,
-           > new technologies, and sustainable practices. In my free time, I enjoy traveling to
-           > exotic places, playing the guitar, and reading science fiction books. How about you?
+To package this project for use in other applications, you can build it into a standard Python wheel file (`.whl`). This project uses `setuptools` and can be built with common Python build tools.
+
+### Building with `uv`
+
+If you have `uv` installed, you can build the package with a single command:
+
+```bash
+uv build
 ```
 
-`TinyWorld` enforces very little constraints on the possible interactions. Subclasses, however, are supposed to provide more structured environments. 
+### Building with standard tools
 
-### Utilities
+If you prefer to use the standard Python `build` package:
 
-TinyTroupe provides a number of utilities and conveniences to help you create simulations and derive value from them. These include:
-  
-  - `TinyPersonFactory`: helps you generate new `TinyPerson`s using LLMs.
-  - `TinyTool`: simulated tools that can be used by `TinyPerson`s.
-  - `TinyStory`: helps you create and manage the story told through simulations.
-  - `TinyPersonValidator`: helps you validate the behavior of your `TinyPerson`s.
-  - `ResultsExtractor` and `ResultsReducer`: extract and reduce the results of interactions between agents.
-  - ... and more ...
-  
-In general, elements that represent simulated entities or complementary mechanisms are prefixed with `Tiny`, while those that are more infrastructural are not. This is to emphasize the simulated nature of the elements that are part of the simulation itself.
+1.  **Install the build tool:**
+    ```bash
+    pip install build
+    ```
 
-### Caching
-Calling LLM APIs can be expensive, thus caching strategies are important to help reduce that cost.
-TinyTroupe comes with two such mechanisms: one for the simulation state, another for the LLM calls themselves.
+2.  **Build the package:**
+    ```bash
+    python -m build
+    ```
 
-
-#### Caching Simulation State
-
-Imagine you have a scenario with 10 different steps, you've worked hard in 9 steps, and now you are
-just tweaking the 10th step. To properly validate your modifications, you need to rerun the whole
-simulation of course. However, what's the point in re-executing the first 9, and incur the LLM cost, when you are 
-already satisfied with them and did not modify them? For situations like this, the module `tinytroupe.control`
-provides useful simulation management methods:
-
-  - `control.begin("<CACHE_FILE_NAME>.cache.json")`: begins recording the state changes of a simulation, to be saved to
-    the specified file on disk.
-  - `control.checkpoint()`: saves the simulation state at this point.
-  - `control.end()`: terminates the simulation recording scope that had been started by `control.begin()`.
-
-#### Caching LLM API Calls
-
-This is enabled preferably in the `config.ini` file, and alternatively via the `litellm_utils.force_api_cache()`.
-
-LLM API caching, when enabled, works at a lower and simpler level than simulation state caching. Here, what happens is very straightforward: every LLM call is kept in a map from the input to the generated output; when a new call comes and is identical to a previous one, the cached value is returned.
-
-### Config.ini
-
-The `config.ini` file contains various parameters that can be used to customize the behavior of the library, such as model parameters and logging level. Please pay special attention to `API_TYPE` parameter, which defines whether you are using the Azure OpenAI Service or the OpenAI API. We provide an example of a `config.ini` file, [./examples/config.ini](./examples/config.ini), which you can use as a template for your own, or just modify to run the examples.
+After running the build command, you will find the distributable files in the `dist/` directory, including the `.whl` file (e.g., `dist/tinytroupe-0.4.0-py3-none-any.whl`).
 
 ## Contributing
 

@@ -1,0 +1,26 @@
+# Git
+.git
+.gitignore
+
+# VSCode
+.vscode
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Windows batch files
+*.bat
+
+# uv lock file
+uv.lock

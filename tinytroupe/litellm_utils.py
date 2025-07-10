@@ -370,7 +370,6 @@ class LiteLLMClient:
                     exponential_backoff_factor=default["exponential_backoff_factor"],
                     n=1,
                     response_format=None,
-                    echo=False,
                     **kwargs):
         """
         Send a message to the LLM model.
@@ -390,7 +389,6 @@ class LiteLLMClient:
             exponential_backoff_factor: Exponential backoff factor
             n: Number of completions
             response_format: Response format specification
-            echo: Whether to echo the prompt
             **kwargs: Additional parameters
             
         Returns:
@@ -402,7 +400,7 @@ class LiteLLMClient:
         # Create cache key
         cache_key = self._create_cache_key(current_messages, model, temperature, max_tokens, 
                                          top_p, frequency_penalty, presence_penalty, stop, 
-                                         response_format, echo, **kwargs)
+                                         response_format, **kwargs)
         
         # Check cache first
         if self.cache_api_calls and cache_key in self.api_cache:
@@ -420,7 +418,6 @@ class LiteLLMClient:
             "presence_penalty": presence_penalty,
             "stop": stop,
             "n": n,
-            "echo": echo,
             **kwargs
         }
         
@@ -501,7 +498,7 @@ class LiteLLMClient:
             return None
     
     def _create_cache_key(self, messages, model, temperature, max_tokens, top_p, 
-                         frequency_penalty, presence_penalty, stop, response_format, echo, **kwargs):
+                         frequency_penalty, presence_penalty, stop, response_format, **kwargs):
         """
         Create a cache key for the request.
         
@@ -515,7 +512,6 @@ class LiteLLMClient:
             presence_penalty: Presence penalty parameter
             stop: Stop sequences
             response_format: Response format
-            echo: Echo parameter
             **kwargs: Additional parameters
             
         Returns:
@@ -532,7 +528,6 @@ class LiteLLMClient:
             "presence_penalty": presence_penalty,
             "stop": stop,
             "response_format": response_format,
-            "echo": echo,
             **kwargs
         }
         
@@ -692,4 +687,4 @@ def force_api_cache(cache_api_calls, cache_file_name=default["cache_file_name"])
 
 # Initialize the default client
 if "litellm" not in _clients:
-    _clients["litellm"] = LiteLLMClient() 
+    _clients["litellm"] = LiteLLMClient()

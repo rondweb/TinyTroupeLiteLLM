@@ -6,14 +6,46 @@ import pickle
 import logging
 import configparser
 from pydantic import BaseModel
-from typing import Union, Optional, Dict, Any, List
+from typing import Union, Optional, Dict, Any, List, Type
 import textwrap  # to dedent strings
 import hashlib
+import inspect
 
 from tinytroupe import utils
 from tinytroupe.control import transactional
 
 logger = logging.getLogger("tinytroupe")
+
+def _json_default_serializer(o):
+    """
+    A default JSON serializer for objects that are not serializable by default.
+    This handles various cases including:
+    - Pydantic model classes (not instances)
+    - Pydantic model instances
+    - Type objects
+    - Other custom classes
+    """
+    # Handle Pydantic model classes
+    if inspect.isclass(o) and issubclass(o, BaseModel):
+        return f"PydanticClass:{o.__name__}"
+    
+    # Handle Pydantic model instances
+    if isinstance(o, BaseModel):
+        return f"PydanticInstance:{o.__class__.__name__}"
+    
+    # Handle Type objects
+    if isinstance(o, type):
+        return f"Type:{o.__name__}"
+    
+    # Handle any other class objects
+    if inspect.isclass(o):
+        return f"Class:{o.__name__}"
+    
+    # For any other objects, convert to string
+    try:
+        return str(o)
+    except:
+        return f"Unserializable:{type(o).__name__}"
 
 # We'll use various configuration elements below
 config = utils.read_config_file()
@@ -397,15 +429,26 @@ class LiteLLMClient:
         if model is None:
             model = default["model"]
         
-        # Create cache key
-        cache_key = self._create_cache_key(current_messages, model, temperature, max_tokens, 
-                                         top_p, frequency_penalty, presence_penalty, stop, 
-                                         response_format, **kwargs)
+        # Re-enable caching based on config setting
+        self.cache_api_calls = default["cache_api_calls"]
         
-        # Check cache first
-        if self.cache_api_calls and cache_key in self.api_cache:
-            logger.debug(f"Cache hit for key: {cache_key[:50]}...")
-            return self.api_cache[cache_key]
+        cache_key = None
+        # Only try to use cache if caching is enabled
+        if self.cache_api_calls:
+            try:
+                # Create cache key
+                cache_key = self._create_cache_key(current_messages, model, temperature, max_tokens, 
+                                                top_p, frequency_penalty, presence_penalty, stop, 
+                                                response_format, **kwargs)
+                
+                # Check cache first
+                if cache_key in self.api_cache:
+                    logger.debug(f"Cache hit for key: {cache_key[:50]}...")
+                    return self.api_cache[cache_key]
+            except Exception as e:
+                # If we can't create a cache key due to non-serializable objects, log and continue without caching
+                logger.warning(f"Could not use cache due to error: {e}")
+                self.cache_api_calls = False  # Temporarily disable caching for this request
         
         # Prepare parameters for LiteLLM
         litellm_params = {
@@ -421,6 +464,26 @@ class LiteLLMClient:
             **kwargs
         }
         
+        # Remove model-specific unsupported parameters
+        if model.startswith("groq/") and "echo" in litellm_params:
+            logger.debug("Removing 'echo' parameter for Groq models")
+            litellm_params.pop("echo")
+            
+        # Handle Gemini models - ensure correct provider and remove unsupported parameters
+        if "gemini" in model.lower():
+            # Ensure correct provider for Gemini
+            if not model.startswith("vertex_ai/"):
+                new_model = f"vertex_ai/gemini-2.0-flash"
+                logger.warning(f"Converting model {model} to use vertex_ai provider: {new_model}")
+                litellm_params["model"] = new_model
+            
+            # Remove unsupported parameters
+            unsupported_params = ["presence_penalty"]
+            for param in unsupported_params:
+                if param in litellm_params:
+                    logger.debug(f"Removing '{param}' parameter for Gemini models")
+                    litellm_params.pop(param)
+        
         # Add response format if specified
         if response_format:
             litellm_params["response_format"] = response_format
@@ -432,7 +495,7 @@ class LiteLLMClient:
         def aux_exponential_backoff():
             for attempt in range(max_attempts + 1):
                 try:
-                    logger.debug(f"Attempting LLM call (attempt {attempt + 1}/{max_attempts + 1})")
+                    logger.debug(f"Attempting LLM call to {model} (attempt {attempt + 1}/{max_attempts + 1})")
                     
                     # Use LiteLLM completion
                     response = litellm.completion(**litellm_params)
@@ -440,10 +503,13 @@ class LiteLLMClient:
                     # Extract the response
                     result = self._raw_model_response_extractor(response)
                     
-                    # Cache the result
-                    if self.cache_api_calls:
-                        self.api_cache[cache_key] = result
-                        self._save_cache()
+                    # Cache the result if caching is enabled and we have a valid cache key
+                    if self.cache_api_calls and cache_key:
+                        try:
+                            self.api_cache[cache_key] = result
+                            self._save_cache()
+                        except Exception as e:
+                            logger.warning(f"Could not cache result: {e}")
                     
                     # Track usage
                     self._track_usage(response, model)
@@ -464,11 +530,48 @@ class LiteLLMClient:
                     raise
                     
                 except litellm.BadRequestError as e:
-                    logger.error(f"Bad request error: {e}")
+                    logger.error(f"Bad request error with model {model}: {e}")
+                    # Extract specific parameter errors from the exception
+                    error_msg = str(e)
+                    
+                    # Check for specific provider issues
+                    if "groq" in model.lower() and "echo" in error_msg.lower():
+                        logger.warning("Groq does not support the 'echo' parameter. Removing it and retrying...")
+                        if "echo" in litellm_params:
+                            litellm_params.pop("echo")
+                            return aux_exponential_backoff()  # Retry with fixed parameters
+                    
+                    # Check for unsupported parameters in Gemini
+                    if "gemini" in model.lower() and "UnsupportedParamsError" in error_msg:
+                        if "presence_penalty" in error_msg:
+                            logger.warning("Gemini does not support the 'presence_penalty' parameter. Removing it and retrying...")
+                            if "presence_penalty" in litellm_params:
+                                litellm_params.pop("presence_penalty")
+                                return aux_exponential_backoff()  # Retry with fixed parameters
+                    
                     raise
+                
+                except litellm.NotFoundError as e:
+                    logger.error(f"Not Found error with model {model}: {e}")
+                    error_msg = str(e)
+                    
+                    # Check for Vertex AI provider issues
+                    if "gemini" in model.lower() and "VertexAIException" in error_msg:
+                        if not model.startswith("vertex_ai/"):
+                            new_model = f"vertex_ai/gemini-2.0-flash"
+                            logger.warning(f"Possible provider mismatch. Converting model {model} to {new_model}")
+                            litellm_params["model"] = new_model
+                            return aux_exponential_backoff()  # Retry with fixed model name
+                    
+                    if attempt < max_attempts:
+                        wait_time = waiting_time * (exponential_backoff_factor ** attempt)
+                        logger.info(f"Waiting {wait_time} seconds before retry...")
+                        time.sleep(wait_time)
+                    else:
+                        raise
                     
                 except Exception as e:
-                    logger.error(f"Unexpected error (attempt {attempt + 1}): {e}")
+                    logger.error(f"Unexpected error (attempt {attempt + 1}) with model {model}: {e}")
                     if attempt < max_attempts:
                         wait_time = waiting_time * (exponential_backoff_factor ** attempt)
                         logger.info(f"Waiting {wait_time} seconds before retry...")
@@ -517,22 +620,36 @@ class LiteLLMClient:
         Returns:
             Cache key string
         """
-        # Create a hash of the request parameters
-        request_data = {
-            "messages": messages,
-            "model": model,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "top_p": top_p,
-            "frequency_penalty": frequency_penalty,
-            "presence_penalty": presence_penalty,
-            "stop": stop,
-            "response_format": response_format,
-            **kwargs
-        }
-        
-        request_str = json.dumps(request_data, sort_keys=True)
-        return hashlib.md5(request_str.encode()).hexdigest()
+        try:
+            # Create a hash of the request parameters
+            request_data = {
+                "messages": messages,
+                "model": model,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "top_p": top_p,
+                "frequency_penalty": frequency_penalty,
+                "presence_penalty": presence_penalty,
+                "stop": stop,
+                "response_format": response_format,
+                **kwargs
+            }
+            
+            # Use our improved serializer to handle non-serializable objects
+            request_str = json.dumps(request_data, sort_keys=True, default=_json_default_serializer)
+            return hashlib.md5(request_str.encode()).hexdigest()
+        except Exception as e:
+            logger.warning(f"Error creating cache key: {e}")
+            # Create a fallback key based on a subset of parameters that are likely to be serializable
+            fallback_data = {
+                "model": str(model),
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                # Include a hash of the messages content
+                "messages_hash": hashlib.md5(str([m.get('content', '') for m in messages]).encode()).hexdigest()
+            }
+            request_str = json.dumps(fallback_data, sort_keys=True)
+            return hashlib.md5(f"fallback:{request_str}".encode()).hexdigest()
     
     def _track_usage(self, response, model):
         """
@@ -686,5 +803,3 @@ def force_api_cache(cache_api_calls, cache_file_name=default["cache_file_name"])
     client().set_api_cache(cache_api_calls, cache_file_name)
 
 # Initialize the default client
-if "litellm" not in _clients:
-    _clients["litellm"] = LiteLLMClient()

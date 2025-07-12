@@ -784,7 +784,8 @@ class TinyPerson(JsonSerializableRegistry):
         logger.debug(f"[{self.name}] Sending messages to LiteLLM API")
         logger.debug(f"[{self.name}] Last interaction: {messages[-1]}")
 
-        next_message = litellm_utils.client().send_message(messages, response_format=CognitiveActionModel)
+        # Pass in response_model instead of the class to avoid serialization issues
+        next_message = litellm_utils.client().send_message(messages)
 
         logger.debug(f"[{self.name}] Received message: {next_message}")
 
